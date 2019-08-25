@@ -13,7 +13,7 @@
 
 for fastq in $1/$2/*
 do
-    CRISPResso -r1 $fastq -a $3 -g $4 -e $5 -o $1/
+    CRISPResso -r1 $fastq -a $3 -g $4 -e $5 -o $1/Analyses/
     cpPieChart.sh $1 $fastq
     cpFreqTable.sh $1 $fastq
 done
