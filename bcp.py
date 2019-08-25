@@ -31,7 +31,6 @@ Usage:
 
 '''
 
-import datetime
 import os
 import pandas
 from pathlib import Path
