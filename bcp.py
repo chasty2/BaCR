@@ -31,7 +31,6 @@ Usage:
 
 '''
 
-import os
 import pandas
 from pathlib import Path
 import shutil
@@ -40,10 +39,14 @@ import sys
 ###########################################################################
 
 #
-## validates argc, flag, and filepaths
+## validates argc, flag, and filepaths. exit bcp if -s flag is present
 #
 
 def checkInputs(argv):
+    # skip flag: exit program
+    if str(sys.argv[1] == '-s'):
+        print('Skip flag detected, exiting bcp.py')
+        exit()
     # help flag
     if str(sys.argv[1]) == '-h':
         print('''
@@ -111,7 +114,7 @@ def buildRunDirectory(csvFile):
     for i in range(len(csvFile.Projects)):
         try:
             #make project dir
-            os.makedirs(str(csvFile.Projects[i]))
+            Path(str(csvFile.Projects[i])).mkdir()
             if str(csvFile.GuideNames[i]) == 'nan':
                 #empty GuideName, make proj subdir
                 buildProjectSubdirectory(str(csvFile.Projects[i]))
@@ -131,12 +134,9 @@ def buildRunDirectory(csvFile):
 #
         
 def buildGuideSubdirectory(projectID,guideName):
-    os.makedirs(projectID + '/' + guideName)
-    os.makedirs(projectID + '/' + guideName + '/' + 'R1')
-    os.makedirs(projectID + '/' + guideName + '/' + 'R2')
-    os.makedirs(projectID + '/' + guideName + '/' + 'PieCharts')
-    os.makedirs(projectID + '/' + guideName + '/' + 'FreqTables')
-    os.makedirs(projectID + '/' + guideName + '/' + 'Analyses')
+   Path(str(projectID + '/' + guideName)).mkdir()
+   Path(str(projectID + '/' + guideName + '/R1')).mkdir()
+   Path(str(projectID + '/' + guideName + '/R2')).mkdir()
 
 ###########################################################################
 
@@ -145,11 +145,8 @@ def buildGuideSubdirectory(projectID,guideName):
 #
 
 def buildProjectSubdirectory(projectID):
-    os.makedirs(projectID + '/' + 'R1')
-    os.makedirs(projectID + '/' + 'R2')
-    os.makedirs(projectID + '/' + 'PieCharts')
-    os.makedirs(projectID + '/' + 'FreqTables')
-    os.makedirs(projectID + '/' + 'Analyses')
+  Path(str(projectID + '/R1')).mkdir()
+  Path(str(projectID + '/R2')).mkdir()
 
 ###########################################################################
 
@@ -184,7 +181,6 @@ def cpFromRuns(csvFile, basemountPath):
         #loop through fastq files in each index directory
         for fastq in indexDir.glob('./Files/*'):
             cpFastq(fastq, csvFile)
-
 
 ###########################################################################
 
@@ -245,10 +241,9 @@ csvFile = pandas.read_csv(sys.argv[3])
 
 buildRunDirectory(csvFile)
 
-if bcpFlag == '-p':
-    cpFromProjects(csvFile, basemountPath)
 if bcpFlag == '-r':
     cpFromRuns(csvFile, basemountPath)
-elif bcpFlag == 'd':
-    cpFromDownloader()
-
+elif bcpFlag == '-p':
+    cpFromProjects(csvFile, basemountPath)
+#elif bcpFlag == 'd':
+#    cpFromDownloader()
