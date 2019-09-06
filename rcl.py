@@ -27,6 +27,9 @@ rcl.py: Run Crispresso Loop(s)
 
 '''
 
+import multiprocessing
+import pandas
+from pathlib import Path
 import sys
 
 ###########################################################################
@@ -89,8 +92,22 @@ NOTE: For any unspecified parameters(e.g. no guideName, guideSeq, HDR,
 ##
 #
 
-def noNan():
-    print('noNaN')
+#def createTSVTitle()
+###########################################################################
+
+#
+## helper function for createBatchFile. creates and populates .tsv file
+## with sample names and file paths for R1 and R2
+#
+
+def _createBatchFilePE(fastqPath, projectID, guideName, readSet):
+    #create title string
+    if guideName == 'nan':
+        title = f'{projectID}_PE_batchfile.tsv'
+    else:
+        title = f'{projectID}_{guideName}_PE_batchfile.tsv'
+    print(title)
+    #create title
 
 ###########################################################################
 
@@ -98,159 +115,58 @@ def noNan():
 ##
 #
 
-def allNan():
-    print('allNan') 
+#def _createBatchFileSingleRead()
 
 ###########################################################################
 
 #
-##
+## creates the .tsv batchfile for CRISPResso2 for a given dataset (row in
+## .csv, given as a tuple) and moves it to it's respective subdirectory
 #
 
-def gNameNan():
-    print('gNameNan')
+def createBatchFile(projectID, guideName, readSet):
+    #declare path to .fastq files based on directory structure
+    fastqPath = Path(projectID)
+    print(str(fastqPath))
+    if guideName == 'nan':
+        _createBatchFilePE(fastqPath, projectID, guideName)
+    else:
+        fastqPath = fastqPath / guideName
+        _createBatchFilePE(fastqPath, projectID, guideName)
 
 ###########################################################################
 
 #
-##
+## master function of rcb.py:
+##      1. declares variables from input dataTuple in human-readable form
+##      2. creates batchfile(s) for dataset based on R1/R2/PE column
 #
 
-def gSeqNan():
-    print('gSeqNan')
+def runCRISPRessoLoop(dataTuple):
+    # declare variables. split reads and cr2Params inputs into tuples for 
+    # separate analyses for R1,R2,PE +- additional parameters
+    coresToUse = str(int(multiprocessing.cpu_count()-2))
+    projectID = str(dataTuple[0])
+    guideName = str(dataTuple[1])
+    reads =tuple(str(dataTuple[2]).split(","))
+    amplicon = str(dataTuple[3])
+    guideSeq = str(dataTuple[4])
+    hdr = str(dataTuple[5])
+    cr2Params =tuple(str(dataTuple[6]).split(","))
 
-###########################################################################
+    # create analysis subdirectory(s) and batchfile(s)
+    for readSet in reads:
+        createBatchFile(projectID, guideName, readSet)
 
-#
-##
-#
 
-def hdrNan():
-    print('hdrNan')
-
-###########################################################################
-
-#
-##
-#
-
-def cr2ParamsNan():
-    print('cr2ParamsNan')
-
-###########################################################################
-
-#
-##
-#
-
-def gNameGSeqNan():
-    print('gNameGSeqNan')
-
-###########################################################################
-
-#
-##
-#
-
-def gSeqHDRNan():
-    print('gNameGSeqNan')
-
-###########################################################################
-
-#
-##
-#
-
-def hdrCR2ParamsNan():
-    print('hdrCR2ParamsNan')
-
-###########################################################################
-
-#
-##
-#
-
-def 
-
-###########################################################################
-
-#
-##
-#
-
-###########################################################################
-
-#
-##
-#
-
-###########################################################################
-
-#
-##
-#
-
-###########################################################################
-
-#
-##
-#
-
-###########################################################################
-
-#
-##
-#
-
-###########################################################################
-
-#
-##
-#
-
-###########################################################################
-
-#
-## Builds a dictionary of inputs that will be used to determine which
-## CRISPResso2 parameters will be ran on the .fastq files of a given 
-## project. Parameters will be decided based on which inputs are not
-## specified ('nan') for the given project
-#
-
-# 16 combinations of 4 parameters:
-#   1x noNan
-#   1x allNan
-#   4x combo of 1
-#   6x combo of 2
-#   4x combo of 3
-
-# NOTE: R1, R2, PE analysis not determined here
-
-def buildLoopDictionary():
-    print('Building Loop Dictionary')
-    loopDictionary = { (): noNan,                                      # 
-                       (GuideNames, GuideSeq, HDR, CR2_Params): allNan,#
-                       (GuideNames): gNameNan,                  #4x1combo#
-                       (GuideSeq): gSeqNan, #
-                       (HDR): hdrNan,   #
-                       (CR2_Params): cr2_ParamsNan,#
-                       (GuideNames, GuideSeq): gNameGSeqNan,    #6x2combo#
-                       (GuideSeq, HDR): gSeqHDRNan, #
-                       (HDR, CR2_Params): hdrCR2ParamsNan,#
-                       (GuideNames, HDR): gNameHDRNan,#
-                       (GuideSeq, CR2_Params): gSeqCR2ParamsNan,
-                       (GuideNames, CR2_Params): gNameCR2ParamsNan,
-                       (GuideNames, GuideSeq, HDR): gNameGSeqHDRNan, #4x3combo
-                       (GuideSeq, HDR, CR2_Params): gSeqHDRCR2ParamsNan,
-                       (GuideNames, GuideSeq, CR2_Params): gNameGSeqCR2ParamsNan,
-                       (GuideNames, HDR, CR2_Params): gNameHDRCR2ParamsNan}
-    return loopDictionary
-
-##### MAIN ################################################################
+###### MAIN ###############################################################
 
 checkInputs()
 
-loopDictionary = buildLoopDictionary()
-print(loopDictionary)
-
+## argc = 2
+if len(sys.argv) == 2:
+    csvFile = pandas.read_csv(sys.argv[1])
+    ## run CRISPRessoBatch on each dataset, given as a row in csvFile
+    for row in csvFile.itertuples():
+        runCRISPRessoLoop(tuple(row[1:]))
 
