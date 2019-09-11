@@ -180,13 +180,12 @@ def cleanupName(fastqName):
 ###########################################################################
 
 #
-## helper function for cpFastq. calls cleanUpName on .fastq, then copies
-## .fastq with new name to destinationPath. prints result of copy to stdout
+## helper function for cpFastq. copies .fastq with clean name to
+## destinationPath. prints result of copy to stdout
 #
 
-def cpPrint(fastqPath, destinationPath):
-    cleanName = cleanupName(fastqPath.name)
-    destPathNewName = destinationPath / cleanName
+def cpPrint(fastqPath, destinationPath, sampleName):
+    destPathNewName = destinationPath / sampleName
     if shutil.copy(fastqPath, destPathNewName):
         print(f'copying {fastqPath.name} to {destPathNewName}')
     
@@ -199,21 +198,28 @@ def cpPrint(fastqPath, destinationPath):
 #
 
 def cpFastq(fastq, csvFile):
+    sampleName = cleanupName(fastq.name)
     for i in range(len(csvFile.Projects)):
-        if str(csvFile.Projects[i]) in fastq.name:
+        if str(csvFile.Projects[i]) in sampleName:
             # fastq matched to dir
             if str(csvFile.GuideNames[i]) == 'nan':
                 # no GuideName, cp to projSubDir
-                if '_R1_' in fastq.name:
-                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/R1'))
+                if '_R1' in sampleName:
+                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/R1'),
+                            sampleName)
                 else:
-                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/R2'))
-            elif str(csvFile.GuideNames[i]) in fastq.name:
+                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/R2'),
+                            sampleName)
+            elif str(csvFile.GuideNames[i]) in sampleName:
                 # fastq matched to GuideName, cp to guideSubDir
-                if '_R1_' in fastq.name:
-                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R1'))
+                if '_R1' in sampleName:
+                    cpPrint(fastq,
+                    Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R1'),
+                    sampleName)
                 else:
-                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R2'))
+                    cpPrint(fastq,
+                    Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R2'),
+                    sampleName)
     return
   
 ###########################################################################
