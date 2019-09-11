@@ -33,6 +33,7 @@ Usage:
 
 import pandas
 from pathlib import Path
+import re
 import shutil
 import sys
 
@@ -42,9 +43,9 @@ import sys
 ## validates argc, flag, and filepaths. exit bcp if -s flag is present
 #
 
-def checkInputs(argv):
+def checkInputs():
     # skip flag: exit program
-    if str(sys.argv[1] == '-s'):
+    if str(sys.argv[1]) == '-s':
         print('Skip flag detected, exiting bcp.py')
         exit()
     # help flag
@@ -103,6 +104,8 @@ def checkInputs(argv):
         print('Error: Invalid path to BaCR csv file')
         exit()
 
+    return
+
 ###########################################################################
 
 #
@@ -127,6 +130,8 @@ def buildRunDirectory(csvFile):
             buildGuideSubdirectory(str(csvFile.Projects[i]),
                                    str(csvFile.GuideNames[i]))
 
+    return
+
 ###########################################################################
 
 #
@@ -134,9 +139,11 @@ def buildRunDirectory(csvFile):
 #
         
 def buildGuideSubdirectory(projectID,guideName):
-   Path(str(projectID + '/' + guideName)).mkdir()
-   Path(str(projectID + '/' + guideName + '/R1')).mkdir()
-   Path(str(projectID + '/' + guideName + '/R2')).mkdir()
+  Path(f'{projectID}/{guideName}').mkdir()
+  Path(f'{projectID}/{guideName}/R1').mkdir()
+  Path(f'{projectID}/{guideName}/R2').mkdir()
+
+  return
 
 ###########################################################################
 
@@ -145,9 +152,70 @@ def buildGuideSubdirectory(projectID,guideName):
 #
 
 def buildProjectSubdirectory(projectID):
-  Path(str(projectID + '/R1')).mkdir()
-  Path(str(projectID + '/R2')).mkdir()
+  Path(f'{projectID}/R1').mkdir()
+  Path(f'{projectID}/R2').mkdir()
 
+  return
+
+###########################################################################
+
+#
+## removes jargon common to all .fastq file names using re and returns a
+## string with the cleaned up name
+#
+
+def cleanupName(fastqName):
+    fastqRegEx = re.compile(r'''(
+        (\S+)           ## sample name, group 2
+        _S\d+_L001      ## jargon common to all fastq file names
+        (_R(1|2))       ## Forward/Reverse read, groups 3 and 4
+        _001            ## more jargon
+        (.fastq.gz)     ## file suffix, group 5
+    )''', re.VERBOSE)
+
+    matchObject = fastqRegEx.search(fastqName)
+    
+    return f'{matchObject.group(2)}{matchObject.group(3)}{matchObject.group(5)}'
+
+###########################################################################
+
+#
+## helper function for cpFastq. calls cleanUpName on .fastq, then copies
+## .fastq with new name to destinationPath. prints result of copy to stdout
+#
+
+def cpPrint(fastqPath, destinationPath):
+    cleanName = cleanupName(fastqPath.name)
+    destPathNewName = destinationPath / cleanName
+    if shutil.copy(fastqPath, destPathNewName):
+        print(f'copying {fastqPath.name} to {destPathNewName}')
+    
+    return
+
+###########################################################################
+
+#
+## matches .fastq to its respective directory, then calls cpPrint
+#
+
+def cpFastq(fastq, csvFile):
+    for i in range(len(csvFile.Projects)):
+        if str(csvFile.Projects[i]) in fastq.name:
+            # fastq matched to dir
+            if str(csvFile.GuideNames[i]) == 'nan':
+                # no GuideName, cp to projSubDir
+                if '_R1_' in fastq.name:
+                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/R1'))
+                else:
+                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/R2'))
+            elif str(csvFile.GuideNames[i]) in fastq.name:
+                # fastq matched to GuideName, cp to guideSubDir
+                if '_R1_' in fastq.name:
+                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R1'))
+                else:
+                    cpPrint(fastq, Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R2'))
+    return
+  
 ###########################################################################
 
 #
@@ -163,7 +231,9 @@ def cpFromProjects(csvFile, basemountPath):
             continue
         #loop through fastq files in each sample directory
         for fastq in sampleDir.glob('./Files/*'):
-                cpFastq(fastq, csvFile)
+            cpFastq(fastq, csvFile)
+
+    return
 
 ###########################################################################
 
@@ -182,6 +252,8 @@ def cpFromRuns(csvFile, basemountPath):
         for fastq in indexDir.glob('./Files/*'):
             cpFastq(fastq, csvFile)
 
+    return
+
 ###########################################################################
 
 #
@@ -190,49 +262,10 @@ def cpFromRuns(csvFile, basemountPath):
 
 #def cpFromDownloader():
 
-###########################################################################
-
-#
-## helper function for cpFastq. copies .fastq from fastqPath to 
-## destinationPath, and prints result of copy to stdout
-#
-
-def cpPrint(fastqPath, destinationPath):
-    if shutil.copy(fastqPath, destinationPath):
-        print('copying ' + fastqPath.name + ' to ' + str(destinationPath))
-    else:
-        print('ERROR: ' + fastqPath.name + ' was not printed to ' +
-              str(destinationPath))
-
-
-###########################################################################
-
-#
-##
-#
-
-def cpFastq(fastq, csvFile):
-    for i in range(len(csvFile.Projects)):
-        if str(csvFile.Projects[i]) in fastq.name:
-            # fastq matched to dir
-            if str(csvFile.GuideNames[i]) == 'nan':
-                # no GuideName, cp to projSubDir
-                if '_R1_' in fastq.name:
-                    cpPrint(fastq, Path(str(csvFile.Projects[i] + '/R1')))
-                else:
-                    cpPrint(fastq, Path(str(csvFile.Projects[i] + '/R2')))
-            elif str(csvFile.GuideNames[i]) in fastq.name:
-                # fastq matched to GuideName, cp to guideSubDir
-                if '_R1_' in fastq.name:
-                    cpPrint(fastq, str(str(csvFile.Projects[i]) + '/' + 
-                            str(csvFile.GuideNames[i]) + '/R1'))
-                else:
-                    cpPrint(fastq, str(str(csvFile.Projects[i]) + '/' + 
-                            str(csvFile.GuideNames[i]) + '/R2'))
-                 
+               
 ####MAIN###################################################################
 
-checkInputs(sys.argv)
+checkInputs()
  
 # declare variables
 bcpFlag = str(sys.argv[1])
