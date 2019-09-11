@@ -214,12 +214,12 @@ def cpFastq(fastq, csvFile):
                 # fastq matched to GuideName, cp to guideSubDir
                 if '_R1' in sampleName:
                     cpPrint(fastq,
-                    Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R1'),
-                    sampleName)
+                            Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R1'),
+                            sampleName)
                 else:
                     cpPrint(fastq,
-                    Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R2'),
-                    sampleName)
+                            Path(f'{csvFile.Projects[i]}/{csvFile.GuideNames[i]}/R2'),
+                            sampleName)
     return
   
 ###########################################################################
