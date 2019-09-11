@@ -27,6 +27,7 @@ rcl.py: Run Crispresso Loop(s)
 
 '''
 
+import csv
 import multiprocessing
 import pandas
 from pathlib import Path
@@ -89,25 +90,26 @@ NOTE: For any unspecified parameters(e.g. no guideName, guideSeq, HDR,
 ###########################################################################
 
 #
-##
+## creates a string for a crispresso2 .tsv batchfile and returns it to
+## the createBatchFile function
 #
 
-#def createTSVTitle()
-###########################################################################
-
-#
-## helper function for createBatchFile. creates and populates .tsv file
-## with sample names and file paths for R1 and R2
-#
-
-def _createBatchFilePE(fastqPath, projectID, guideName, readSet):
-    #create title string
+def createTSVTitle(projectID, guideName, readSet):
     if guideName == 'nan':
-        title = f'{projectID}_PE_batchfile.tsv'
+        title = f'{projectID}_{readSet}_batchfile.tsv'
     else:
-        title = f'{projectID}_{guideName}_PE_batchfile.tsv'
-    print(title)
-    #create title
+        title = f'{projectID}_{guideName}_{readSet}_batchfile.tsv'
+
+    return str(title)
+###########################################################################
+
+#
+## helper function for createBatchFile. Populates .tsv file with sample
+## names and file paths for R1 and R2
+#
+
+#def _populateBatchFilePairedEnd(fastqPath, projectID, guideName, readSet):
+    
 
 ###########################################################################
 
@@ -115,25 +117,22 @@ def _createBatchFilePE(fastqPath, projectID, guideName, readSet):
 ##
 #
 
-#def _createBatchFileSingleRead()
+#def _populateBatchFileSingleRead():
 
 ###########################################################################
 
 #
 ## creates the .tsv batchfile for CRISPResso2 for a given dataset (row in
-## .csv, given as a tuple) and moves it to it's respective subdirectory
+## .csv, given as a tuple) and populates it with the names and paths of
+## the .fastq files in that dataset
 #
 
 def createBatchFile(projectID, guideName, readSet):
-    #declare path to .fastq files based on directory structure
-    fastqPath = Path(projectID)
-    print(str(fastqPath))
-    if guideName == 'nan':
-        _createBatchFilePE(fastqPath, projectID, guideName)
-    else:
-        fastqPath = fastqPath / guideName
-        _createBatchFilePE(fastqPath, projectID, guideName)
+    ##create .tsv file with title corresponding to dataset
+    title = createTSVTitle(projectID, guideName, readSet)
 
+
+    
 ###########################################################################
 
 #
