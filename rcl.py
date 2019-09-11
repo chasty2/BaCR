@@ -105,19 +105,21 @@ def createTSVTitle(projectID, guideName, readSet):
 
 #
 ## helper function for createBatchFile. Populates .tsv file with sample
-## names and file paths for R1 and R2
+## names and file paths for both R1 and R2
 #
 
-#def _populateBatchFilePairedEnd(fastqPath, projectID, guideName, readSet):
+def _populateBatchFilePairedEnd(projectID, guideName,writer):
+    return
     
-
 ###########################################################################
 
 #
-##
+## helper function for createBatchFile. Populates .tsv file with sample
+## names and file paths for the specified readSet
 #
 
-#def _populateBatchFileSingleRead():
+def _populateBatchFileSingleRead(projectID, guideName, readSet, writer):
+    return
 
 ###########################################################################
 
@@ -130,7 +132,14 @@ def createTSVTitle(projectID, guideName, readSet):
 def createBatchFile(projectID, guideName, readSet):
     ##create .tsv file with title corresponding to dataset
     title = createTSVTitle(projectID, guideName, readSet)
+    with open(title, 'w') as tsvFile:
+        writer = csv.writer(tsvFile, delimiter = '\t', newline = '\n')
+        if readSet == 'PE':
+            _populateBatchFilePairedEnd(projectID, guideName, writer)
+        else:
+            _populateBatchFileSingleRead(projectID, guideName, readSet, writer)
 
+    return
 
     
 ###########################################################################
