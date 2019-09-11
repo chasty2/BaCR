@@ -90,11 +90,11 @@ NOTE: For any unspecified parameters(e.g. no guideName, guideSeq, HDR,
 ###########################################################################
 
 #
-## creates a string for a crispresso2 .tsv batchfile and returns it to
-## the createBatchFile function
+## helper function for createBatchFile. creates a string for a crispresso2 
+## .tsv batchfile and returns it to the createBatchFile function
 #
 
-def createTSVTitle(projectID, guideName, readSet):
+def _createTSVTitle(projectID, guideName, readSet):
     if guideName == 'nan':
         title = f'{projectID}_{readSet}_batchfile.tsv'
     else:
@@ -109,6 +109,22 @@ def createTSVTitle(projectID, guideName, readSet):
 #
 
 def _populateBatchFilePairedEnd(projectID, guideName,writer):
+    # write title
+    writer.writerow(['name', 'fastq_r1', 'fastq_r2'])
+    # declare path to R1/R2 reads
+    if guideName == 'nan':
+        r1Path = Path(f'{projectID}/R1')
+        r2Path = Path(f'{projectID}/R2')
+    else:
+        r1Path = Path(f'{projectID}/{guideName}/R1')
+        r2Path = Path(f'{projectID}/{guideName}/R2')
+    # loop through R1 files and slice filename to get sampleName and R2
+    for r1 in r1Path.glob('*.fastq.gz'):
+        sampleName = r1.name[:-12]
+        r2 = r2Path / f'{sampleName}_R2.fastq.gz'
+        #populate row
+        writer.writerow([sampleName, r1, r2])
+
     return
     
 ###########################################################################
@@ -119,6 +135,7 @@ def _populateBatchFilePairedEnd(projectID, guideName,writer):
 #
 
 def _populateBatchFileSingleRead(projectID, guideName, readSet, writer):
+    print(readSet)
     return
 
 ###########################################################################
@@ -131,9 +148,9 @@ def _populateBatchFileSingleRead(projectID, guideName, readSet, writer):
 
 def createBatchFile(projectID, guideName, readSet):
     ##create .tsv file with title corresponding to dataset
-    title = createTSVTitle(projectID, guideName, readSet)
+    title = _createTSVTitle(projectID, guideName, readSet)
     with open(title, 'w') as tsvFile:
-        writer = csv.writer(tsvFile, delimiter = '\t', newline = '\n')
+        writer = csv.writer(tsvFile, delimiter = '\t', lineterminator = '\n')
         if readSet == 'PE':
             _populateBatchFilePairedEnd(projectID, guideName, writer)
         else:
