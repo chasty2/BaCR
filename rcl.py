@@ -31,6 +31,7 @@ import csv
 import multiprocessing
 import pandas
 from pathlib import Path
+import subprocess
 import sys
 
 ###########################################################################
@@ -96,9 +97,9 @@ NOTE: For any unspecified parameters(e.g. no guideName, guideSeq, HDR,
 
 def _createTSVTitle(projectID, guideName, readSet):
     if guideName == 'nan':
-        title = f'{projectID}_{readSet}_batchfile.tsv'
+        title = f'{projectID}_{readSet}.tsv'
     else:
-        title = f'{projectID}_{guideName}_{readSet}_batchfile.tsv'
+        title = f'{projectID}_{guideName}_{readSet}.tsv'
 
     return str(title)
 ###########################################################################
@@ -111,7 +112,7 @@ def _createTSVTitle(projectID, guideName, readSet):
 def _populateBatchFilePairedEnd(projectID, guideName,writer):
     # write title
     writer.writerow(['name', 'fastq_r1', 'fastq_r2'])
-    # declare path to R1/R2 reads
+    # declare path to R1 and R2 reads
     if guideName == 'nan':
         r1Path = Path(f'{projectID}/R1')
         r2Path = Path(f'{projectID}/R2')
@@ -135,7 +136,19 @@ def _populateBatchFilePairedEnd(projectID, guideName,writer):
 #
 
 def _populateBatchFileSingleRead(projectID, guideName, readSet, writer):
-    print(readSet)
+    #write title
+    writer.writerow(['name', 'fastq_r1'])
+    #declare path to reads specified by readSet
+    if guideName == 'nan':
+        readPath = Path(f'{projectID}/{readSet}')
+    else:
+        readPath = Path(f'{projectID}/{guideName}/{readSet}')
+    #loop through .fastq files and slice filename to get sampleName
+    for fastq in readPath.glob('*.fastq.gz'):
+        sampleName = fastq.name[:-12]
+        #populate row
+        writer.writerow([sampleName, fastq])
+
     return
 
 ###########################################################################
@@ -143,7 +156,7 @@ def _populateBatchFileSingleRead(projectID, guideName, readSet, writer):
 #
 ## creates the .tsv batchfile for CRISPResso2 for a given dataset (row in
 ## .csv, given as a tuple) and populates it with the names and paths of
-## the .fastq files in that dataset
+## the .fastq files in that dataset. Returns .tsv
 #
 
 def createBatchFile(projectID, guideName, readSet):
@@ -156,20 +169,59 @@ def createBatchFile(projectID, guideName, readSet):
         else:
             _populateBatchFileSingleRead(projectID, guideName, readSet, writer)
 
-    return
+    return tsvFile
 
     
 ###########################################################################
 
 #
+## concatenates strings from dataset inputs to create command input for
+## CRISPRessoBatch
+#
+
+def createCRISPRessoInput(batchFile, coresToUse, projectID, guideName,
+                          readSet, amplicon, guideSeq, hdr, cr2Params):
+    # declare CRISPResso2 command and concatenate mandatory parameters
+    CRISPRessoInput = f'CRISPRessoBatch --batch_settings {batchFile}'
+    CRISPRessoInput = f'{CRISPRessoInput} -p {coresToUse} --skip_failed'
+    # specify output folder
+    if guideName == 'nan':
+        outputPath = Path(f'{projectID}/CRISPRessoBatch_Analysis_{readSet}')
+        CRISPRessoInput = f'{CRISPRessoInput} -bo {outputPath}'
+    else:
+        outputPath = Path(f'{projectID}/{guideName}/CRISPRessoBatch_Analysis_{readSet}')
+        CRISPRessoInput = f'{CRISPRessoInput} -bo {outputPath}'
+    #slice amplicon for R1/R2 analysis if amplicon size > 165
+    if readSet == 'R1' and len(amplicon) > 165:
+        CRISPRessoInput = f'{CRISPRessoInput} -a {amplicon[:149]}'
+    elif readSet == 'R2' and len(amplicon) > 165:
+        CRISPRessoInput = f'{CRISPRessoInput} -a {amplicon[149:]}'
+    else:
+        CRISPRessoInput = f'{CRISPRessoInput} -a {amplicon}'
+    # concatenate additional parameters if they exist
+    if guideSeq != 'nan':
+        CRISPRessoInput = f'{CRISPRessoInput} -g {guideSeq}'
+    if hdr != 'nan':
+        CRISPRessoInput = f'{CRISPRessoInput} -e {hdr}'
+    if cr2Params != 'nan':
+        CRISPRessoInput = f'{CRISPRessoInput} {cr2Params}'
+    
+    return CRISPRessoInput
+
+###########################################################################
+
+
+#
 ## master function of rcb.py:
 ##      1. declares variables from input dataTuple in human-readable form
 ##      2. creates batchfile(s) for dataset based on R1/R2/PE column
+##      3. build CRISPRessoBatch input
+##      4. Run CRISPRessoBatch
 #
 
 def runCRISPRessoLoop(dataTuple):
-    # declare variables. split reads and cr2Params inputs into tuples for 
-    # separate analyses for R1,R2,PE +- additional parameters
+    # declare variables. split reads inputs into tuples for 
+    # separate analyses for R1,R2,PE
     coresToUse = str(int(multiprocessing.cpu_count()-2))
     projectID = str(dataTuple[0])
     guideName = str(dataTuple[1])
@@ -177,12 +229,18 @@ def runCRISPRessoLoop(dataTuple):
     amplicon = str(dataTuple[3])
     guideSeq = str(dataTuple[4])
     hdr = str(dataTuple[5])
-    cr2Params =tuple(str(dataTuple[6]).split(","))
+    cr2Params =str(dataTuple[6])
 
-    # create analysis subdirectory(s) and batchfile(s)
+    # create batchfile(s), CRISPResso2 input(s), and call cr2 for each
     for readSet in reads:
-        createBatchFile(projectID, guideName, readSet)
+        batchFile = createBatchFile(projectID, guideName, readSet)
+        CRISPRessoInput = createCRISPRessoInput(batchFile.name, coresToUse,
+                                                projectID,guideName,
+                                                readSet,amplicon,
+                                                guideSeq, hdr, cr2Params)
+        subprocess.run(str(CRISPRessoInput), shell=True, cwd = str(Path.cwd()))
 
+    return
 
 ###### MAIN ###############################################################
 
