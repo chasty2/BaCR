@@ -197,7 +197,7 @@ def createCRISPRessoInput(batchFile, coresToUse, projectID, guideName,
     if readSet == 'R1' and len(amplicon) > 200:
         CRISPRessoInput = f'{CRISPRessoInput} -a {amplicon[:149]}'
     elif readSet == 'R2' and len(amplicon) > 200:
-        CRISPRessoInput = f'{CRISPRessoInput} -a {amplicon[-149:]}'
+        CRISPRessoInput = f'{CRISPRessoInput} -a {amplicon[-150:]}'
     else:
         CRISPRessoInput = f'{CRISPRessoInput} -a {amplicon}'
 
@@ -222,7 +222,7 @@ def createCRISPRessoInput(batchFile, coresToUse, projectID, guideName,
 ##      4. Run CRISPRessoBatch
 #
 
-def runCRISPRessoLoop(dataTuple):
+def runCRISPRessoBatch(dataTuple):
     # declare variables. split reads inputs into tuples for 
     # separate analyses for R1,R2,PE
     coresToUse = str(int(multiprocessing.cpu_count()-2))
@@ -254,5 +254,11 @@ if len(sys.argv) == 2:
     csvFile = pandas.read_csv(sys.argv[1])
     ## run CRISPRessoBatch on each dataset, given as a row in csvFile
     for row in csvFile.itertuples():
-        runCRISPRessoLoop(tuple(row[1:]))
+        runCRISPRessoBatch(tuple(row[1:]))
+## argc = 8
+else:
+    dataTuple = (sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4],
+                      sys.argv[5], sys.argv[6], sys.argv[7])
+    runCRISPRessoBatch(dataTuple)
 
+exit()
