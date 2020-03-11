@@ -1,3 +1,9 @@
+## Installation Notes (python 2.7)
+
+- when using conda to install crispresso2, trimmomatic is looking for a python version >= 2.7.* while crispresso2 is 
+    looking for a version >= 2.7. This will cause the installation of the most recent version to hang at installation
+    (previous versions will not work).
+
 ## Sample Naming
 
 The BaCR pipeline relies on the naming of samples for the correct sorting and analysis of each sample. The scripts
